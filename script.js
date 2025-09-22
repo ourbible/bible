@@ -18,6 +18,8 @@ function initSelectors() {
     const bookSelect = document.getElementById("book-select");
     const chapterSelect = document.getElementById("chapter-select");
     const verseSelect = document.getElementById("verse-select");
+    const searchInput = document.getElementById("search-input");
+    const searchBtn = document.getElementById("search-btn");
 
     // isi buku
     for (const book in bibleData) {
@@ -46,6 +48,18 @@ function initSelectors() {
     verseSelect.addEventListener("change", () => {
         currentVerse = parseInt(verseSelect.value);
         showVerse();
+    });
+
+    searchBtn.addEventListener("click", () => {
+        const query = searchInput.value.trim();
+        if (query) searchBible(query);
+    });
+
+    searchInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            const query = searchInput.value.trim();
+            if (query) searchBible(query);
+        }
     });
 }
 
