@@ -8,51 +8,7 @@
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Merriweather&display=swap" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <style>
-body { 
-  font-family: 'Merriweather', serif; 
-}
-
-.verse-card {
-  @apply p-3 bg-white rounded shadow;
-  word-break: break-word;
-  white-space: normal;
-  overflow-wrap: break-word;
-  line-height: 1.42;        /* line-height teks */
-  font-size: 1.23rem;      /* font lebih besar dari sebelumnya */
-  margin-bottom: 1.5rem;   /* jarak antar ayat (sekitar 2 spasi) */
-}
-
-.chapter-title {
-  font-size: 1.4rem;
-  font-weight: bold;
-  margin-bottom: 0.75rem;
-}
-
-.verse-number {
-  font-size: 1.1rem;
-  font-weight: bold;
-  margin-right: 0.35rem;
-  color: #555;
-}
-
-mark { background-color: yellow; }
-
-/* Sticky ad bar */
-#topAdBar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-
-@media (min-width: 768px) {
-  .chapter-title { font-size: 1.6rem; }
-  .verse-number { font-size: 1.2rem; }
-  .verse-card { font-size: 1.23rem; line-height: 1.42; margin-bottom: 1.5rem; }
-}
-</style>
-
-
+  <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
   <!-- Navbar -->
@@ -130,4 +86,3 @@ mark { background-color: yellow; }
   <script src="scripto.js"></script>
 </body>
 </html>
-
