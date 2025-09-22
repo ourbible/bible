@@ -1,8 +1,8 @@
 let bibleData;
-let currentBook = "John";
+let currentBook = "Genesis";
 let currentChapter = 1;
 let currentVerse = 1;
-let searchActive = false; // flag mode hasil pencarian aktif
+let searchActive = false;
 
 // Load Bible JSON
 fetch("kjv_nested.json")
@@ -34,18 +34,23 @@ function initSelectors() {
     currentBook = bookSelect.value;
     updateChapters();
     updateVerses();
-    showChapter(); // hapus hasil search
   });
 
   chapterSelect.addEventListener("change", () => {
     currentChapter = parseInt(chapterSelect.value);
     updateVerses();
-    showChapter(); // hapus hasil search
   });
 
   verseSelect.addEventListener("change", () => {
     currentVerse = parseInt(verseSelect.value);
-    showVerse(); // hapus hasil search
+  });
+
+  // 🔎 pencarian juga jalan saat tekan Enter
+  document.getElementById("searchBox").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      searchBible();
+    }
   });
 }
 
@@ -71,27 +76,32 @@ function updateVerses() {
 
 // Show single verse
 function showVerse() {
-  searchActive = false; // hapus mode search
+  searchActive = false;
   const verseText = bibleData[currentBook][currentChapter][currentVerse];
+  document.getElementById("searchResults").innerHTML = "";
   document.getElementById("output").innerHTML = `
     <div class="chapter-title">${currentBook} ${currentChapter}:${currentVerse}</div>
-    <p class="verse-card"><span class="verse-number">${currentVerse}</span> ${verseText}</p>
+    <p class="verse-card text-lg leading-snug mb-8">
+      <span class="verse-number">${currentVerse}</span> ${verseText}
+    </p>
   `;
 }
 
 // Show full chapter
 function showChapter() {
-  searchActive = false; // hapus mode search
+  searchActive = false;
   const verses = bibleData[currentBook][currentChapter];
   let html = `<div class="chapter-title">${currentBook} ${currentChapter}</div>`;
   Object.keys(verses).forEach(v => {
-    html += `<p class="verse-card"><span class="verse-number">${v}</span> ${verses[v]}</p>`;
+    html += `<p class="verse-card text-lg leading-snug mb-8"><span class="verse-number">${v}</span> ${verses[v]}</p>`;
   });
+  document.getElementById("searchResults").innerHTML = "";
   document.getElementById("output").innerHTML = html;
 }
 
 // Navigation
 function nextVerse() {
+  if (searchActive) return;
   const totalVerses = Object.keys(bibleData[currentBook][currentChapter]).length;
   if (currentVerse < totalVerses) {
     currentVerse++;
@@ -104,6 +114,7 @@ function nextVerse() {
 }
 
 function prevVerse() {
+  if (searchActive) return;
   if (currentVerse > 1) {
     currentVerse--;
     updateVerses();
@@ -114,6 +125,7 @@ function prevVerse() {
 }
 
 function nextChapter() {
+  if (searchActive) return;
   const totalChapters = Object.keys(bibleData[currentBook]).length;
   if (currentChapter < totalChapters) {
     currentChapter++;
@@ -125,6 +137,7 @@ function nextChapter() {
 }
 
 function prevChapter() {
+  if (searchActive) return;
   if (currentChapter > 1) {
     currentChapter--;
     currentVerse = 1;
@@ -138,15 +151,17 @@ function prevChapter() {
 function searchBible() {
   const keyword = document.getElementById("searchBox").value.toLowerCase();
   const bookFilter = document.getElementById("searchBook").value;
-  const container = document.getElementById("output"); // tampil di output utama
-  searchActive = true;
+  const resultsDiv = document.getElementById("searchResults");
+  const outputDiv = document.getElementById("output");
+  let results = "";
 
   if (!keyword) {
-    container.innerHTML = "<p class='text-gray-600'>Please enter a keyword.</p>";
+    resultsDiv.innerHTML = "<p class='text-gray-600'>Please enter a keyword.</p>";
     return;
   }
 
-  let results = "";
+  searchActive = true;
+  outputDiv.innerHTML = "";
 
   Object.keys(bibleData).forEach(book => {
     if (bookFilter !== "all" && book !== bookFilter) return;
@@ -159,34 +174,31 @@ function searchBible() {
             match => `<mark>${match}</mark>`
           );
           results += `
-            <p class="verse-card">
-              <a href="javascript:void(0)" onclick="gotoVerse('${book}', ${chap}, ${verse})" class="text-blue-700 hover:underline">
-                <span class="verse-number">${book} ${chap}:${verse}</span>
-              </a>
-              ${highlighted}
+            <p class="verse-card text-lg leading-snug mb-8">
+              <a href="javascript:void(0)" onclick="gotoVerse('${book}', ${chap}, ${verse})" class="font-bold text-blue-700 hover:underline"
+   title="Go to ${book} ${chap}:${verse}">
+                ${book} ${chap}:${verse}
+              </a> ${highlighted}
             </p>`;
         }
       });
     });
   });
 
-  container.innerHTML = results || "<p class='text-gray-600'>No results found.</p>";
+  resultsDiv.innerHTML = results || "<p class='text-gray-600'>No results found.</p>";
 }
 
 // Navigate to verse from search
 function gotoVerse(book, chap, verse) {
   currentBook = book;
-  currentChapter = chap;
-  currentVerse = verse;
-  searchActive = false;
+  currentChapter = parseInt(chap);
+  currentVerse = parseInt(verse);
 
-  // Update dropdowns
-  document.getElementById("book").value = book;
+  document.getElementById("book").value = currentBook;
   updateChapters();
-  document.getElementById("chapter").value = chap;
+  document.getElementById("chapter").value = currentChapter;
   updateVerses();
-  document.getElementById("verse").value = verse;
+  document.getElementById("verse").value = currentVerse;
 
   showVerse();
 }
-
