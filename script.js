@@ -2,7 +2,7 @@ let bibleData;
 let currentBook = "Genesis";
 let currentChapter = 1;
 let currentVerse = 1;
-let searchActive = false; // flag mode pencarian aktif
+let searchActive = false; // flag mode hasil pencarian aktif
 
 // Load JSON Alkitab
 fetch("kjv_nested.json")
@@ -21,7 +21,7 @@ function initSelectors() {
     const searchInput = document.getElementById("search-input");
     const searchBtn = document.getElementById("search-btn");
 
-    // isi buku
+    // isi dropdown buku
     for (const book in bibleData) {
         const option = document.createElement("option");
         option.value = book;
@@ -36,18 +36,18 @@ function initSelectors() {
     bookSelect.addEventListener("change", () => {
         currentBook = bookSelect.value;
         updateChapters();
-        showChapter();
+        showChapter(); // otomatis menghapus hasil pencarian
     });
 
     chapterSelect.addEventListener("change", () => {
         currentChapter = parseInt(chapterSelect.value);
         updateVerses();
-        showChapter();
+        showChapter(); // otomatis menghapus hasil pencarian
     });
 
     verseSelect.addEventListener("change", () => {
         currentVerse = parseInt(verseSelect.value);
-        showVerse();
+        showVerse(); // otomatis menghapus hasil pencarian
     });
 
     searchBtn.addEventListener("click", () => {
@@ -94,8 +94,8 @@ function updateVerses() {
 
 // Tampilkan satu ayat
 function showVerse() {
-    searchActive = false; // menonaktifkan mode search
-    const container = document.getElementById("verse-container");
+    searchActive = false; // menonaktifkan mode pencarian
+    const container = document.getElementById("output"); // container lama
     container.innerHTML = "";
     const verseText = bibleData[currentBook][currentChapter][currentVerse];
     container.appendChild(createVerseCard(currentVerse, verseText));
@@ -103,8 +103,8 @@ function showVerse() {
 
 // Tampilkan satu chapter
 function showChapter() {
-    searchActive = false; // menonaktifkan mode search
-    const container = document.getElementById("verse-container");
+    searchActive = false; // menonaktifkan mode pencarian
+    const container = document.getElementById("output");
     container.innerHTML = "";
     const verses = bibleData[currentBook][currentChapter];
     for (let i = 1; i <= verses.length; i++) {
@@ -115,7 +115,7 @@ function showChapter() {
 // Pencarian di seluruh Bible
 function searchBible(query) {
     searchActive = true;
-    const container = document.getElementById("verse-container");
+    const container = document.getElementById("output");
     container.innerHTML = "";
 
     const results = [];
@@ -141,34 +141,29 @@ function searchBible(query) {
     }
 }
 
-// Navigasi langsung ke buku/chapter/verse
-function navigateTo(book, chapter, verse) {
-    currentBook = book;
-    currentChapter = chapter;
-    currentVerse = verse;
-
-    if (searchActive) searchActive = false; // hilangkan mode search
-
-    // Update dropdown
-    document.getElementById("book-select").value = book;
-    updateChapters();
-    document.getElementById("chapter-select").value = chapter;
-    updateVerses();
-    document.getElementById("verse-select").value = verse;
-
-    showVerse();
-}
-
 // Membuat card ayat
 function createVerseCard(verseNum, text, book=null, chapter=null) {
     const div = document.createElement("div");
     div.className = "verse-card";
     div.innerHTML = `<span class="verse-number">${verseNum}</span> ${text}`;
 
-    // Jika berasal dari hasil pencarian, bisa klik untuk navigasi
+    // Jika berasal dari hasil pencarian, klik navigasi ke ayat asli
     if (book && chapter) {
         div.addEventListener("click", () => {
-            navigateTo(book, chapter, verseNum);
+            currentBook = book;
+            currentChapter = chapter;
+            currentVerse = verseNum;
+
+            searchActive = false; // hilangkan mode pencarian
+
+            // update dropdown jika ada
+            document.getElementById("book-select").value = book;
+            updateChapters();
+            document.getElementById("chapter-select").value = chapter;
+            updateVerses();
+            document.getElementById("verse-select").value = verseNum;
+
+            showVerse();
         });
     }
 
