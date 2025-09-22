@@ -1,150 +1,115 @@
-let bibleData;
-let currentBook = "John";
-let currentChapter = 1;
-let currentVerse = 1;
+let bibleData = {};
+let currentBook = null;
+let currentChapter = null;
+let currentVerse = null;
 
-// Load Bible JSON
+// === Load Bible JSON ===
 fetch("kjv_nested.json")
   .then(res => res.json())
   .then(data => {
     bibleData = data;
-    initSelectors();
-    loadFromURL(); // cek hash url saat pertama kali buka
+    console.log("Bible data loaded");
   });
 
-// Initialize dropdowns
-function initSelectors() {
-  const bookSelect = document.getElementById("book");
-  const chapterSelect = document.getElementById("chapter");
-  const verseSelect = document.getElementById("verse");
-  const searchBook = document.getElementById("searchBook");
+// === Update <title> & <meta> dynamically ===
+function updatePageMeta(title, description, keywords) {
+  document.title = title;
 
-  // Fill books
-  Object.keys(bibleData).forEach(book => {
-    bookSelect.add(new Option(book, book));
-    searchBook.add(new Option(book, book));
-  });
-
-  bookSelect.value = currentBook;
-  updateChapters();
-  updateVerses();
-
-  bookSelect.addEventListener("change", () => {
-    currentBook = bookSelect.value;
-    updateChapters();
-    updateVerses();
-  });
-
-  chapterSelect.addEventListener("change", () => {
-    currentChapter = parseInt(chapterSelect.value);
-    updateVerses();
-  });
-
-  verseSelect.addEventListener("change", () => {
-    currentVerse = parseInt(verseSelect.value);
-  });
-}
-
-function updateChapters() {
-  const chapterSelect = document.getElementById("chapter");
-  chapterSelect.innerHTML = "";
-  const totalChapters = Object.keys(bibleData[currentBook]).length;
-  for (let i = 1; i <= totalChapters; i++) {
-    chapterSelect.add(new Option(i, i));
+  let descTag = document.querySelector("meta[name='description']");
+  if (!descTag) {
+    descTag = document.createElement("meta");
+    descTag.name = "description";
+    document.head.appendChild(descTag);
   }
-  chapterSelect.value = currentChapter;
-}
+  descTag.content = description;
 
-function updateVerses() {
-  const verseSelect = document.getElementById("verse");
-  verseSelect.innerHTML = "";
-  const totalVerses = Object.keys(bibleData[currentBook][currentChapter]).length;
-  for (let i = 1; i <= totalVerses; i++) {
-    verseSelect.add(new Option(i, i));
+  let keyTag = document.querySelector("meta[name='keywords']");
+  if (!keyTag) {
+    keyTag = document.createElement("meta");
+    keyTag.name = "keywords";
+    document.head.appendChild(keyTag);
   }
-  verseSelect.value = currentVerse;
+  keyTag.content = keywords;
 }
 
-// Show single verse
-function showVerse(updateURL = true) {
+// === Navigate to verse ===
+function gotoVerse(book, chapter, verse = null, push = true) {
+  currentBook = book;
+  currentChapter = chapter;
+  currentVerse = verse;
+
+  if (verse) {
+    showVerse(push);
+  } else {
+    showChapter(push);
+  }
+}
+
+// === Show single verse ===
+function showVerse(push = true) {
   const verseText = bibleData[currentBook][currentChapter][currentVerse];
+
+  // Clear search results
+  document.getElementById("searchResults").innerHTML = "";
+
   document.getElementById("output").innerHTML = `
     <div class="chapter-title">${currentBook} ${currentChapter}:${currentVerse}</div>
     <p class="verse-card"><span class="verse-number">${currentVerse}</span> ${verseText}</p>
   `;
 
-  if (updateURL) {
-    window.location.hash = `${currentBook}/${currentChapter}/${currentVerse}`;
-    document.title = `${currentBook} ${currentChapter}:${currentVerse} (KJV) | OurBible`;
+  updatePageMeta(
+    `${currentBook} ${currentChapter}:${currentVerse} (KJV) | OurBible`,
+    `${currentBook} ${currentChapter}:${currentVerse} - ${verseText}`,
+    `${currentBook}, ${currentBook} ${currentChapter}, ${currentBook} ${currentChapter}:${currentVerse}, Bible, KJV`
+  );
+
+  if (push) {
+    history.pushState(
+      { book: currentBook, chapter: currentChapter, verse: currentVerse },
+      "",
+      `#${currentBook}/${currentChapter}/${currentVerse}`
+    );
   }
 }
 
-// Show full chapter
-function showChapter(updateURL = true) {
+// === Show full chapter ===
+function showChapter(push = true) {
   const verses = bibleData[currentBook][currentChapter];
+
+  // Clear search results
+  document.getElementById("searchResults").innerHTML = "";
+
   let html = `<div class="chapter-title">${currentBook} ${currentChapter}</div>`;
   Object.keys(verses).forEach(v => {
     html += `<p class="verse-card"><span class="verse-number">${v}</span> ${verses[v]}</p>`;
   });
   document.getElementById("output").innerHTML = html;
 
-  if (updateURL) {
-    window.location.hash = `${currentBook}/${currentChapter}`;
-    document.title = `${currentBook} ${currentChapter} (KJV) | OurBible`;
+  updatePageMeta(
+    `${currentBook} ${currentChapter} (KJV) | OurBible`,
+    `Read ${currentBook} chapter ${currentChapter} (KJV Bible).`,
+    `${currentBook}, ${currentBook} ${currentChapter}, Bible, KJV`
+  );
+
+  if (push) {
+    history.pushState(
+      { book: currentBook, chapter: currentChapter, verse: null },
+      "",
+      `#${currentBook}/${currentChapter}`
+    );
   }
 }
 
-// Navigation
-function nextVerse() {
-  const totalVerses = Object.keys(bibleData[currentBook][currentChapter]).length;
-  if (currentVerse < totalVerses) {
-    currentVerse++;
-  } else {
-    nextChapter();
-    return;
-  }
-  updateVerses();
-  showVerse();
-}
-
-function prevVerse() {
-  if (currentVerse > 1) {
-    currentVerse--;
-    updateVerses();
-    showVerse();
-  } else {
-    prevChapter();
-  }
-}
-
-function nextChapter() {
-  const totalChapters = Object.keys(bibleData[currentBook]).length;
-  if (currentChapter < totalChapters) {
-    currentChapter++;
-    currentVerse = 1;
-    updateChapters();
-    updateVerses();
-    showVerse();
-  }
-}
-
-function prevChapter() {
-  if (currentChapter > 1) {
-    currentChapter--;
-    currentVerse = 1;
-    updateChapters();
-    updateVerses();
-    showVerse();
-  }
-}
-
-// Search
-function searchBible(updateURL = true) {
+// === Search Bible ===
+function searchBible(push = true) {
   const keyword = document.getElementById("searchBox").value.toLowerCase();
   const bookFilter = document.getElementById("searchBook").value;
   const resultsDiv = document.getElementById("searchResults");
-  let results = "";
 
+  // Clear output
+  document.getElementById("output").innerHTML = "";
+
+  let results = "";
   if (!keyword) {
     resultsDiv.innerHTML = "<p class='text-gray-600'>Please enter a keyword.</p>";
     return;
@@ -162,8 +127,10 @@ function searchBible(updateURL = true) {
           );
           results += `
             <p class="verse-card">
-              <a href="javascript:void(0)" onclick="gotoVerse('${book}', ${chap}, ${verse})" 
-                 class="font-bold text-blue-700 hover:underline">
+              <a href="javascript:void(0)" 
+                 onclick="gotoVerse('${book}', ${chap}, ${verse})"
+                 class="font-bold text-blue-700 hover:underline"
+                 title="Go to ${book} ${chap}:${verse}">
                 ${book} ${chap}:${verse}
               </a> ${highlighted}
             </p>`;
@@ -174,54 +141,46 @@ function searchBible(updateURL = true) {
 
   resultsDiv.innerHTML = results || "<p class='text-gray-600'>No results found.</p>";
 
-  if (updateURL) {
-    window.location.hash = `search=${encodeURIComponent(keyword)}`;
-    document.title = `Search: ${keyword} | OurBible`;
+  updatePageMeta(
+    `Search results for "${keyword}" | OurBible`,
+    `Search results in KJV Bible for "${keyword}".`,
+    `${keyword}, Bible search, KJV, Scripture`
+  );
+
+  if (push) {
+    history.pushState({ search: keyword }, "", `#search=${encodeURIComponent(keyword)}`);
   }
 }
 
-// Jump directly from search result
-function gotoVerse(book, chap, verse) {
-  currentBook = book;
-  currentChapter = parseInt(chap);
-  currentVerse = parseInt(verse);
-  updateChapters();
-  updateVerses();
-  showVerse();
-}
-
-// Load state from URL hash
-function loadFromURL() {
-  const hash = window.location.hash.substring(1);
-  if (!hash) {
-    showVerse(false);
-    return;
-  }
-
-  if (hash.startsWith("search=")) {
-    const keyword = decodeURIComponent(hash.split("=")[1]);
-    document.getElementById("searchBox").value = keyword;
-    searchBible(false);
-    return;
-  }
-
-  const parts = hash.split("/");
-  if (parts.length >= 2) {
-    currentBook = parts[0];
-    currentChapter = parseInt(parts[1]);
-    currentVerse = parts[2] ? parseInt(parts[2]) : 1;
-
-    updateChapters();
-    updateVerses();
-    showVerse(false);
-  } else {
-    showVerse(false);
-  }
-}
-
-// Handle enter key for search
-document.getElementById("searchBox").addEventListener("keypress", function(e) {
-  if (e.key === "Enter") {
-    searchBible();
+// === Listen for Enter on search box ===
+document.addEventListener("DOMContentLoaded", () => {
+  const searchBox = document.getElementById("searchBox");
+  if (searchBox) {
+    searchBox.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        searchBible();
+      }
+    });
   }
 });
+
+// === Handle back/forward ===
+window.onpopstate = function (event) {
+  if (event.state) {
+    if (event.state.search) {
+      document.getElementById("searchBox").value = event.state.search;
+      searchBible(false);
+    } else if (event.state.book) {
+      gotoVerse(event.state.book, event.state.chapter, event.state.verse, false);
+    }
+  } else {
+    // Reset to homepage
+    document.getElementById("output").innerHTML = "";
+    document.getElementById("searchResults").innerHTML = "";
+    updatePageMeta(
+      "KJV Bible Online | OurBible",
+      "Read the King James Version Bible online. Search, browse, and study scripture.",
+      "Bible, KJV, Scripture, Online Bible, OurBible"
+    );
+  }
+};
