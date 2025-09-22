@@ -1,25 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>KJV Bible Viewer</title>
-  <!-- TailwindCSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Merriweather&display=swap" rel="stylesheet">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alkitab Online</title>
+
+<!-- Font -->
+<link href="https://fonts.googleapis.com/css2?family=Merriweather&display=swap" rel="stylesheet">
+
+<style>
   body { 
-    font-family: 'Merriweather', serif; 
+    font-family: 'Merriweather', serif;
+    background-color: #f8f9fa;
+    padding: 1rem;
+  }
+
+  /* Container utama untuk chapter/ayat dan hasil pencarian */
+  #verse-container {
+    margin-top: 1rem;
   }
 
   /* Ayat */
   .verse-card {
-    @apply p-3 mb-6 bg-white rounded shadow text-base leading-relaxed; /* mb-6 agar jarak antar ayat lebih lega */
+    padding: 1rem;
+    margin-bottom: 1.5rem; /* jarak antar ayat lebih lega */
+    background-color: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    font-size: 1rem;
+    line-height: 1.3; /* line-height teks ayat lebih rapat */
     word-break: break-word;
-    white-space: normal;
     overflow-wrap: break-word;
-    line-height: 1.3; /* line-height teks ayat lebih rapat, nyaman dibaca */
+  }
+
+  /* Nomor ayat */
+  .verse-number {
+    font-weight: bold;
+    margin-right: 0.35rem;
+    color: #555;
   }
 
   /* Judul pasal */
@@ -29,20 +47,16 @@
     margin-bottom: 0.75rem;
   }
 
-  /* Nomor ayat */
-  .verse-number {
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin-right: 0.35rem;
-    color: #555;
+  mark { background-color: yellow; }
+
+  /* Dropdown */
+  select {
+    padding: 0.35rem 0.5rem;
+    margin-right: 0.5rem;
+    font-size: 1rem;
   }
 
-  /* Highlight */
-  mark { 
-    background-color: yellow; 
-  }
-
-  /* Sticky ad bar */
+  /* Sticky ad bar (opsional) */
   #topAdBar {
     position: sticky;
     top: 0;
@@ -52,84 +66,31 @@
   /* Responsive */
   @media (min-width: 768px) {
     .chapter-title { font-size: 1.6rem; }
-    .verse-number { font-size: 1.2rem; }
-    .verse-card { 
-      font-size: 1.4rem; 
-      line-height: 1.25; /* sedikit lebih rapat di layar besar */
-      margin-bottom: 1.70rem; /* jarak antar ayat lebih lega di layar besar */
-    }
+    .verse-card { font-size: 1.1rem; line-height: 1.25; margin-bottom: 1.75rem; }
   }
 </style>
-
 </head>
-<body class="bg-gray-100 min-h-screen">
-  <!-- Navbar -->
-  <nav class="bg-blue-900 text-white p-3 shadow">
-    <div class="max-w-6xl mx-auto flex justify-between">
-      <h1 class="text-lg md:text-xl font-bold">📖 KJV Bible</h1>
-    </div>
-  </nav>
+<body>
 
-  <!-- Content -->
-  <main class="max-w-6xl mx-auto p-4">
-    <!-- Top Row: Book Selector & Search -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-      
-      <!-- Box 1: Book / Chapter / Verse -->
-      <div class="bg-white shadow rounded-lg p-4">
-        <h2 class="text-base font-semibold mb-2">Select Verse</h2>
-        <div class="grid grid-cols-3 gap-2">
-          <select id="book" class="w-full border p-1.5 rounded text-sm"></select>
-          <select id="chapter" class="w-full border p-1.5 rounded text-sm"></select>
-          <select id="verse" class="w-full border p-1.5 rounded text-sm"></select>
-        </div>
-        <div class="flex gap-2 mt-3">
-          <button onclick="showVerse()" class="flex-1 bg-blue-700 text-white py-1.5 rounded hover:bg-blue-800 text-sm">Show</button>
-          <button onclick="showChapter()" class="flex-1 bg-green-700 text-white py-1.5 rounded hover:bg-green-800 text-sm">Chapter</button>
-        </div>
-      </div>
+<!-- Header / Top Bar -->
+<div id="topAdBar">
+  <h1 class="chapter-title">Alkitab Online</h1>
+</div>
 
-      <!-- Box 2: Search -->
-      <div class="bg-white shadow rounded-lg p-4">
-        <h2 class="text-base font-semibold mb-2">Search</h2>
-        <div class="flex flex-col md:flex-row gap-2">
-          <input type="text" id="searchBox" class="flex-1 border p-1.5 rounded text-sm" placeholder="Enter keyword (e.g., love)">
-          <select id="searchBook" class="border p-1.5 rounded text-sm">
-            <option value="all">All Books</option>
-          </select>
-          <button onclick="searchBible()" class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 text-sm">Go</button>
-        </div>
-      </div>
+<!-- Navigasi Book / Chapter / Verse -->
+<div id="navigation">
+  <select id="book-select"></select>
+  <select id="chapter-select"></select>
+  <select id="verse-select"></select>
+  <input type="text" id="search-input" placeholder="Cari kata..." />
+  <button id="search-btn">Search</button>
+</div>
 
-    </div>
+<!-- Container utama untuk chapter/ayat dan hasil pencarian -->
+<div id="verse-container"></div>
 
-    <!-- Sticky Text Ad Bar -->
-    <div id="topAdBar" class="bg-yellow-100 border border-yellow-400 text-yellow-800 rounded px-3 py-1 text-center mb-4 text-sm">
-      [ Iklan Teks Sticky - selalu terlihat saat scroll ]
-    </div>
+<!-- Script -->
+<script src="script.js"></script>
 
-    <!-- Output -->
-    <div id="verse-container"></div>
-    
-    <!-- Navigation -->
-    <div class="flex flex-wrap gap-2 justify-center mt-3 text-sm">
-      <button onclick="prevVerse()" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">⬅ Prev Verse</button>
-      <button onclick="nextVerse()" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Next Verse ➡</button>
-      <button onclick="prevChapter()" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">⬆ Prev Chapter</button>
-      <button onclick="nextChapter()" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Next Chapter ⬇</button>
-    </div>
-
-    <!-- Large Banner Ad Spot -->
-    <div class="mt-6 flex justify-center">
-      <div class="w-full md:w-11/12 lg:w-4/5 bg-gray-200 border border-dashed border-gray-400 rounded-lg text-center py-10">
-        <span class="text-gray-600 text-base">[ Banner Iklan Besar 970x250 / Responsive ]</span>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- Script -->
-  <script src="script.js"></script>
 </body>
 </html>
-
