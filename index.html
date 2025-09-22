@@ -3,235 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <title>KJV Bible Viewer</title>
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-    select, input, button { margin: 5px; padding: 5px; }
-    #output { margin-top: 20px; font-size: 18px; white-space: pre-wrap; }
-    .nav-buttons { margin-top: 15px; }
-    button { padding: 6px 10px; cursor: pointer; }
-    .chapter-view { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px; }
-    .search-results { margin-top: 20px; border-top: 2px solid #444; padding-top: 15px; }
-    .search-results p { margin: 5px 0; }
+    body { font-family: 'Merriweather', serif; }
+    .verse-card { @apply p-4 mb-2 bg-white rounded-lg shadow; }
+    mark { background-color: yellow; }
   </style>
 </head>
-<body>
-  <h1>KJV Bible</h1>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Navbar -->
+  <nav class="bg-blue-900 text-white p-4 shadow">
+    <div class="max-w-4xl mx-auto flex justify-between">
+      <h1 class="text-xl font-bold">📖 KJV Bible</h1>
+      <a href="#search" class="hover:underline">Search</a>
+    </div>
+  </nav>
 
-  <label>Book:</label>
-  <select id="book"></select>
+  <!-- Content -->
+  <main class="max-w-4xl mx-auto p-6">
+    <!-- Selector -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+        <div>
+          <label class="font-semibold">Book</label>
+          <select id="book" class="w-full border p-2 rounded"></select>
+        </div>
+        <div>
+          <label class="font-semibold">Chapter</label>
+          <select id="chapter" class="w-full border p-2 rounded"></select>
+        </div>
+        <div>
+          <label class="font-semibold">Verse</label>
+          <select id="verse" class="w-full border p-2 rounded"></select>
+        </div>
+        <div class="flex gap-2 mt-6 md:mt-0">
+          <button onclick="showVerse()" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Show</button>
+          <button onclick="showChapter()" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800">Chapter</button>
+        </div>
+      </div>
+    </div>
 
-  <label>Chapter:</label>
-  <select id="chapter"></select>
+    <!-- Output -->
+    <div id="output" class="verse-card text-lg"></div>
 
-  <label>Verse:</label>
-  <select id="verse"></select>
+    <!-- Navigation -->
+    <div class="flex flex-wrap gap-2 justify-center mt-4">
+      <button onclick="prevVerse()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">⬅ Prev Verse</button>
+      <button onclick="nextVerse()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Next Verse ➡</button>
+      <button onclick="prevChapter()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">⬆ Prev Chapter</button>
+      <button onclick="nextChapter()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Next Chapter ⬇</button>
+    </div>
 
-  <button onclick="showVerse()">Show Verse</button>
-  <button onclick="showChapter()">📖 Read Full Chapter</button>
+    <!-- Search -->
+    <section id="search" class="mt-10 bg-white shadow rounded-lg p-6">
+      <h2 class="text-xl font-bold mb-4">🔍 Search</h2>
+      <div class="flex flex-col md:flex-row gap-2">
+        <input type="text" id="searchBox" class="flex-1 border p-2 rounded" placeholder="Enter keyword (e.g., love)">
+        <select id="searchBook" class="border p-2 rounded">
+          <option value="all">All Books</option>
+        </select>
+        <button onclick="searchBible()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
+      </div>
+      <div id="searchResults" class="mt-4"></div>
+    </section>
+  </main>
 
-  <div id="output"></div>
-
-  <div class="nav-buttons">
-    <button onclick="prevVerse()">⬅ Prev Verse</button>
-    <button onclick="nextVerse()">Next Verse ➡</button>
-    <button onclick="prevChapter()">⬆ Prev Chapter</button>
-    <button onclick="nextChapter()">Next Chapter ⬇</button>
-  </div>
-
-  <hr>
-  <h2>🔍 Search</h2>
-  <input type="text" id="searchBox" placeholder="Enter keyword (e.g., love)">
-  <label> in </label>
-  <select id="searchBook">
-    <option value="all">All Books</option>
-  </select>
-  <button onclick="searchBible()">Search</button>
-  <div id="searchResults" class="search-results"></div>
-
-  <script>
-    let bibleData = {};
-    let bookList = [];
-
-    async function loadBible() {
-      const response = await fetch("kjv_nested.json");
-      bibleData = await response.json();
-      
-      bookList = Object.keys(bibleData);
-
-      // Dropdown utama (navigasi Alkitab)
-      const bookSelect = document.getElementById("book");
-      bookList.forEach(book => {
-        let opt = document.createElement("option");
-        opt.value = book;
-        opt.textContent = book;
-        bookSelect.appendChild(opt);
-      });
-
-      // Dropdown filter pencarian
-      const searchBookSelect = document.getElementById("searchBook");
-      bookList.forEach(book => {
-        let opt = document.createElement("option");
-        opt.value = book;
-        opt.textContent = book;
-        searchBookSelect.appendChild(opt);
-      });
-
-      bookSelect.addEventListener("change", updateChapters);
-      document.getElementById("chapter").addEventListener("change", updateVerses);
-
-      updateChapters();
-      showVerse();
-    }
-
-    function updateChapters() {
-      const book = document.getElementById("book").value;
-      const chapters = Object.keys(bibleData[book]);
-      const chapterSelect = document.getElementById("chapter");
-      chapterSelect.innerHTML = "";
-      chapters.forEach(ch => {
-        let opt = document.createElement("option");
-        opt.value = ch;
-        opt.textContent = ch;
-        chapterSelect.appendChild(opt);
-      });
-      updateVerses();
-    }
-
-    function updateVerses() {
-      const book = document.getElementById("book").value;
-      const chapter = document.getElementById("chapter").value;
-      const verses = Object.keys(bibleData[book][chapter]);
-      const verseSelect = document.getElementById("verse");
-      verseSelect.innerHTML = "";
-      verses.forEach(v => {
-        let opt = document.createElement("option");
-        opt.value = v;
-        opt.textContent = v;
-        verseSelect.appendChild(opt);
-      });
-    }
-
-    function showVerse() {
-      const book = document.getElementById("book").value;
-      const chapter = document.getElementById("chapter").value;
-      const verse = document.getElementById("verse").value;
-      const text = bibleData[book][chapter][verse];
-      document.getElementById("output").innerHTML = `<strong>${book} ${chapter}:${verse}</strong><br>${text}`;
-    }
-
-    function showChapter() {
-      const book = document.getElementById("book").value;
-      const chapter = document.getElementById("chapter").value;
-      const verses = bibleData[book][chapter];
-      let html = `<h2>${book} ${chapter}</h2>`;
-      Object.keys(verses).forEach(v => {
-        html += `<p><sup>${v}</sup> ${verses[v]}</p>`;
-      });
-      document.getElementById("output").innerHTML = `<div class="chapter-view">${html}</div>`;
-    }
-
-    function nextVerse() {
-      const verseSelect = document.getElementById("verse");
-      let currentIndex = verseSelect.selectedIndex;
-      if (currentIndex < verseSelect.options.length - 1) {
-        verseSelect.selectedIndex = currentIndex + 1;
-        showVerse();
-      } else {
-        nextChapter();
-      }
-    }
-
-    function prevVerse() {
-      const verseSelect = document.getElementById("verse");
-      let currentIndex = verseSelect.selectedIndex;
-      if (currentIndex > 0) {
-        verseSelect.selectedIndex = currentIndex - 1;
-        showVerse();
-      } else {
-        prevChapter();
-      }
-    }
-
-    function nextChapter() {
-      const chapterSelect = document.getElementById("chapter");
-      let currentIndex = chapterSelect.selectedIndex;
-      if (currentIndex < chapterSelect.options.length - 1) {
-        chapterSelect.selectedIndex = currentIndex + 1;
-        updateVerses();
-        document.getElementById("verse").selectedIndex = 0;
-        showVerse();
-      } else {
-        const bookSelect = document.getElementById("book");
-        let bookIndex = bookSelect.selectedIndex;
-        if (bookIndex < bookSelect.options.length - 1) {
-          bookSelect.selectedIndex = bookIndex + 1;
-          updateChapters();
-          document.getElementById("chapter").selectedIndex = 0;
-          updateVerses();
-          document.getElementById("verse").selectedIndex = 0;
-          showVerse();
-        }
-      }
-    }
-
-    function prevChapter() {
-      const chapterSelect = document.getElementById("chapter");
-      let currentIndex = chapterSelect.selectedIndex;
-      if (currentIndex > 0) {
-        chapterSelect.selectedIndex = currentIndex - 1;
-        updateVerses();
-        const verseSelect = document.getElementById("verse");
-        verseSelect.selectedIndex = verseSelect.options.length - 1;
-        showVerse();
-      } else {
-        const bookSelect = document.getElementById("book");
-        let bookIndex = bookSelect.selectedIndex;
-        if (bookIndex > 0) {
-          bookSelect.selectedIndex = bookIndex - 1;
-          updateChapters();
-          const chapterSel = document.getElementById("chapter");
-          chapterSel.selectedIndex = chapterSel.options.length - 1;
-          updateVerses();
-          const verseSelect = document.getElementById("verse");
-          verseSelect.selectedIndex = verseSelect.options.length - 1;
-          showVerse();
-        }
-      }
-    }
-
-    function searchBible() {
-      const keyword = document.getElementById("searchBox").value.trim().toLowerCase();
-      const filterBook = document.getElementById("searchBook").value;
-      const resultsDiv = document.getElementById("searchResults");
-      resultsDiv.innerHTML = "";
-
-      if (!keyword) {
-        resultsDiv.innerHTML = "<p>Please enter a keyword.</p>";
-        return;
-      }
-
-      let results = [];
-      let searchBooks = filterBook === "all" ? bookList : [filterBook];
-
-      for (let book of searchBooks) {
-        for (let ch in bibleData[book]) {
-          for (let v in bibleData[book][ch]) {
-            let text = bibleData[book][ch][v];
-            if (text.toLowerCase().includes(keyword)) {
-              results.push(`<p><strong>${book} ${ch}:${v}</strong> - ${text}</p>`);
-            }
-          }
-        }
-      }
-
-      if (results.length === 0) {
-        resultsDiv.innerHTML = `<p>No verses found for "${keyword}".</p>`;
-      } else {
-        resultsDiv.innerHTML = `<h3>Results for "${keyword}" (${results.length} verses)</h3>` + results.join("");
-      }
-    }
-
-    loadBible();
-  </script>
+  <!-- Script -->
+  <script src="script.js"></script>
 </body>
 </html>
