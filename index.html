@@ -11,57 +11,58 @@
     body { font-family: 'Merriweather', serif; }
     .verse-card { @apply p-4 mb-2 bg-white rounded-lg shadow; }
     mark { background-color: yellow; }
+    /* Sticky ad bar */
+    #topAdBar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
   <!-- Navbar -->
   <nav class="bg-blue-900 text-white p-4 shadow">
-    <div class="max-w-5xl mx-auto flex justify-between">
-      <h1 class="text-xl font-bold">📖 KJV Bible</h1>
+    <div class="max-w-6xl mx-auto flex justify-between">
+      <h1 class="text-xl md:text-2xl font-bold">📖 KJV Bible</h1>
     </div>
   </nav>
 
   <!-- Content -->
-  <main class="max-w-5xl mx-auto p-6">
-    <!-- Selector & Search in one row -->
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        <!-- Book/Chapter/Verse -->
-        <div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="font-semibold">Book</label>
-              <select id="book" class="w-full border p-2 rounded"></select>
-            </div>
-            <div>
-              <label class="font-semibold">Chapter</label>
-              <select id="chapter" class="w-full border p-2 rounded"></select>
-            </div>
-            <div>
-              <label class="font-semibold">Verse</label>
-              <select id="verse" class="w-full border p-2 rounded"></select>
-            </div>
-          </div>
-          <div class="flex gap-2 mt-4">
-            <button onclick="showVerse()" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Show</button>
-            <button onclick="showChapter()" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800">Chapter</button>
-          </div>
+  <main class="max-w-6xl mx-auto p-6">
+    <!-- Top Row: Book Selector & Search -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-3">
+      
+      <!-- Box 1: Book / Chapter / Verse -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-semibold mb-3">Select Verse</h2>
+        <div class="grid grid-cols-3 gap-3">
+          <select id="book" class="w-full border p-2 rounded text-sm md:text-base"></select>
+          <select id="chapter" class="w-full border p-2 rounded text-sm md:text-base"></select>
+          <select id="verse" class="w-full border p-2 rounded text-sm md:text-base"></select>
         </div>
-
-        <!-- Search Bar -->
-        <div>
-          <label class="font-semibold">Search</label>
-          <div class="flex gap-2 mt-1">
-            <input type="text" id="searchBox" class="flex-1 border p-2 rounded" placeholder="Enter keyword (e.g., love)">
-            <select id="searchBook" class="border p-2 rounded">
-              <option value="all">All Books</option>
-            </select>
-            <button onclick="searchBible()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Go</button>
-          </div>
+        <div class="flex gap-3 mt-4">
+          <button onclick="showVerse()" class="flex-1 bg-blue-700 text-white py-2 rounded hover:bg-blue-800 text-sm md:text-base">Show</button>
+          <button onclick="showChapter()" class="flex-1 bg-green-700 text-white py-2 rounded hover:bg-green-800 text-sm md:text-base">Chapter</button>
         </div>
-
       </div>
+
+      <!-- Box 2: Search -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-semibold mb-3">Search</h2>
+        <div class="flex flex-col md:flex-row gap-3">
+          <input type="text" id="searchBox" class="flex-1 border p-2 rounded text-sm md:text-base" placeholder="Enter keyword (e.g., love)">
+          <select id="searchBook" class="border p-2 rounded text-sm md:text-base">
+            <option value="all">All Books</option>
+          </select>
+          <button onclick="searchBible()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm md:text-base">Go</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Sticky Text Ad Bar -->
+    <div id="topAdBar" class="bg-yellow-100 border border-yellow-400 text-yellow-800 rounded px-4 py-2 text-center mb-6">
+      [ Iklan Teks Sticky - selalu terlihat saat scroll ]
     </div>
 
     <!-- Output -->
@@ -75,11 +76,10 @@
       <button onclick="nextChapter()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Next Chapter ⬇</button>
     </div>
 
-    <!-- Banner Ad Spot -->
-    <div class="mt-6 flex justify-center">
-      <div class="w-full md:w-4/5 lg:w-3/5 bg-gray-200 border border-dashed border-gray-400 rounded-lg text-center py-6">
-        <!-- Ganti isi di bawah ini dengan script/banner iklan -->
-        <span class="text-gray-600">[ Banner Iklan 728x90 / Responsive ]</span>
+    <!-- Large Banner Ad Spot -->
+    <div class="mt-8 flex justify-center">
+      <div class="w-full md:w-11/12 lg:w-4/5 bg-gray-200 border border-dashed border-gray-400 rounded-lg text-center py-12">
+        <span class="text-gray-600 text-lg">[ Banner Iklan Besar 970x250 / Responsive ]</span>
       </div>
     </div>
 
