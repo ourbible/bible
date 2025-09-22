@@ -2,7 +2,6 @@ let bibleData;
 let currentBook = "John";
 let currentChapter = 1;
 let currentVerse = 1;
-let searchActive = false;
 
 // Load Bible JSON
 fetch("kjv_nested.json")
@@ -10,7 +9,7 @@ fetch("kjv_nested.json")
   .then(data => {
     bibleData = data;
     initSelectors();
-    showVerse();
+    loadFromURL(); // cek hash url saat pertama kali buka
   });
 
 // Initialize dropdowns
@@ -44,14 +43,6 @@ function initSelectors() {
   verseSelect.addEventListener("change", () => {
     currentVerse = parseInt(verseSelect.value);
   });
-
-  // 🔎 pencarian juga jalan saat tekan Enter
-  document.getElementById("searchBox").addEventListener("keypress", function(e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      searchBible();
-    }
-  });
 }
 
 function updateChapters() {
@@ -75,33 +66,36 @@ function updateVerses() {
 }
 
 // Show single verse
-function showVerse() {
-  searchActive = false;
+function showVerse(updateURL = true) {
   const verseText = bibleData[currentBook][currentChapter][currentVerse];
-  document.getElementById("searchResults").innerHTML = "";
   document.getElementById("output").innerHTML = `
     <div class="chapter-title">${currentBook} ${currentChapter}:${currentVerse}</div>
-    <p class="verse-card text-lg leading-snug mb-8">
-      <span class="verse-number">${currentVerse}</span> ${verseText}
-    </p>
+    <p class="verse-card"><span class="verse-number">${currentVerse}</span> ${verseText}</p>
   `;
+
+  if (updateURL) {
+    window.location.hash = `${currentBook}/${currentChapter}/${currentVerse}`;
+    document.title = `${currentBook} ${currentChapter}:${currentVerse} (KJV) | OurBible`;
+  }
 }
 
 // Show full chapter
-function showChapter() {
-  searchActive = false;
+function showChapter(updateURL = true) {
   const verses = bibleData[currentBook][currentChapter];
   let html = `<div class="chapter-title">${currentBook} ${currentChapter}</div>`;
   Object.keys(verses).forEach(v => {
-    html += `<p class="verse-card text-lg leading-snug mb-8"><span class="verse-number">${v}</span> ${verses[v]}</p>`;
+    html += `<p class="verse-card"><span class="verse-number">${v}</span> ${verses[v]}</p>`;
   });
-  document.getElementById("searchResults").innerHTML = "";
   document.getElementById("output").innerHTML = html;
+
+  if (updateURL) {
+    window.location.hash = `${currentBook}/${currentChapter}`;
+    document.title = `${currentBook} ${currentChapter} (KJV) | OurBible`;
+  }
 }
 
 // Navigation
 function nextVerse() {
-  if (searchActive) return;
   const totalVerses = Object.keys(bibleData[currentBook][currentChapter]).length;
   if (currentVerse < totalVerses) {
     currentVerse++;
@@ -114,7 +108,6 @@ function nextVerse() {
 }
 
 function prevVerse() {
-  if (searchActive) return;
   if (currentVerse > 1) {
     currentVerse--;
     updateVerses();
@@ -125,7 +118,6 @@ function prevVerse() {
 }
 
 function nextChapter() {
-  if (searchActive) return;
   const totalChapters = Object.keys(bibleData[currentBook]).length;
   if (currentChapter < totalChapters) {
     currentChapter++;
@@ -137,7 +129,6 @@ function nextChapter() {
 }
 
 function prevChapter() {
-  if (searchActive) return;
   if (currentChapter > 1) {
     currentChapter--;
     currentVerse = 1;
@@ -148,20 +139,16 @@ function prevChapter() {
 }
 
 // Search
-function searchBible() {
+function searchBible(updateURL = true) {
   const keyword = document.getElementById("searchBox").value.toLowerCase();
   const bookFilter = document.getElementById("searchBook").value;
   const resultsDiv = document.getElementById("searchResults");
-  const outputDiv = document.getElementById("output");
   let results = "";
 
   if (!keyword) {
     resultsDiv.innerHTML = "<p class='text-gray-600'>Please enter a keyword.</p>";
     return;
   }
-
-  searchActive = true;
-  outputDiv.innerHTML = "";
 
   Object.keys(bibleData).forEach(book => {
     if (bookFilter !== "all" && book !== bookFilter) return;
@@ -174,9 +161,9 @@ function searchBible() {
             match => `<mark>${match}</mark>`
           );
           results += `
-            <p class="verse-card text-lg leading-snug mb-8">
-              <a href="javascript:void(0)" onclick="gotoVerse('${book}', ${chap}, ${verse})" class="font-bold text-blue-700 hover:underline"
-   title="Go to ${book} ${chap}:${verse}">
+            <p class="verse-card">
+              <a href="javascript:void(0)" onclick="gotoVerse('${book}', ${chap}, ${verse})" 
+                 class="font-bold text-blue-700 hover:underline">
                 ${book} ${chap}:${verse}
               </a> ${highlighted}
             </p>`;
@@ -186,20 +173,55 @@ function searchBible() {
   });
 
   resultsDiv.innerHTML = results || "<p class='text-gray-600'>No results found.</p>";
+
+  if (updateURL) {
+    window.location.hash = `search=${encodeURIComponent(keyword)}`;
+    document.title = `Search: ${keyword} | OurBible`;
+  }
 }
 
-// Navigate to verse from search
+// Jump directly from search result
 function gotoVerse(book, chap, verse) {
   currentBook = book;
   currentChapter = parseInt(chap);
   currentVerse = parseInt(verse);
-
-  document.getElementById("book").value = currentBook;
   updateChapters();
-  document.getElementById("chapter").value = currentChapter;
   updateVerses();
-  document.getElementById("verse").value = currentVerse;
-
   showVerse();
 }
 
+// Load state from URL hash
+function loadFromURL() {
+  const hash = window.location.hash.substring(1);
+  if (!hash) {
+    showVerse(false);
+    return;
+  }
+
+  if (hash.startsWith("search=")) {
+    const keyword = decodeURIComponent(hash.split("=")[1]);
+    document.getElementById("searchBox").value = keyword;
+    searchBible(false);
+    return;
+  }
+
+  const parts = hash.split("/");
+  if (parts.length >= 2) {
+    currentBook = parts[0];
+    currentChapter = parseInt(parts[1]);
+    currentVerse = parts[2] ? parseInt(parts[2]) : 1;
+
+    updateChapters();
+    updateVerses();
+    showVerse(false);
+  } else {
+    showVerse(false);
+  }
+}
+
+// Handle enter key for search
+document.getElementById("searchBox").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") {
+    searchBible();
+  }
+});
