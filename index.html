@@ -8,17 +8,29 @@
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Merriweather&display=swap" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- penting untuk responsif -->
-  <style>
-    body { font-family: 'Merriweather', serif; }
-    .verse-card { @apply p-3 mb-2 bg-white rounded shadow text-base leading-relaxed break-words; }
-    mark { background-color: yellow; }
-    /* Sticky ad bar */
-    #topAdBar {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-  </style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<style>
+  body { 
+    font-family: 'Merriweather', serif; 
+  }
+  .verse-card { 
+    @apply p-3 mb-2 bg-white rounded shadow text-base leading-relaxed;
+    /* Tambahan supaya teks wrap di semua kondisi */
+    word-break: break-word;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  mark { 
+    background-color: yellow; 
+  }
+  /* Sticky ad bar */
+  #topAdBar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+</style>
+
 </head>
 <body class="bg-gray-100 min-h-screen">
   <!-- Navbar -->
@@ -92,3 +104,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
