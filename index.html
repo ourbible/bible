@@ -7,55 +7,46 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Merriweather&display=swap" rel="stylesheet">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- penting untuk responsif -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-<style>
-  body { 
-    font-family: 'Merriweather', serif; 
-  }
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <style>
+    body { font-family: 'Merriweather', serif; }
 
-  /* Setiap card ayat */
-  .verse-card { 
-    @apply p-3 mb-4 bg-white rounded shadow text-base leading-relaxed;
-    word-break: break-word;
-    white-space: normal;
-    overflow-wrap: break-word;
-    line-height: 1.8; /* lebih lega */
-  }
+    .verse-card {
+      @apply p-3 mb-4 bg-white rounded shadow text-base leading-relaxed;
+      word-break: break-word;
+      white-space: normal;
+      overflow-wrap: break-word;
+      line-height: 1.8; /* lebih lega */
+    }
 
-  /* Nama kitab dan pasal */
-  .chapter-title {
-    font-size: 1.4rem;   /* agak besar */
-    font-weight: bold;
-    margin-bottom: 0.75rem;
-  }
+    .chapter-title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      margin-bottom: 0.75rem;
+    }
 
-  /* Nomor ayat */
-  .verse-number {
-    font-size: 1.1rem;   /* sedikit lebih besar dari teks */
-    font-weight: bold;
-    margin-right: 0.35rem;
-    color: #555;
-  }
+    .verse-number {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-right: 0.35rem;
+      color: #555;
+    }
 
-  mark { background-color: yellow; }
+    mark { background-color: yellow; }
 
-  /* Sticky ad bar */
-  #topAdBar {
-    position: sticky;
-    top: 0;
-    z-index: 50;
-  }
+    /* Sticky ad bar */
+    #topAdBar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
 
-  /* Responsive scaling */
-  @media (min-width: 768px) {
-    .chapter-title { font-size: 1.6rem; }
-    .verse-number { font-size: 1.2rem; }
-    .verse-card { font-size: 1.05rem; line-height: 1.9; }
-  }
-</style>
-
-
+    @media (min-width: 768px) {
+      .chapter-title { font-size: 1.6rem; }
+      .verse-number { font-size: 1.2rem; }
+      .verse-card { font-size: 1.05rem; line-height: 1.9; }
+    }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
   <!-- Navbar -->
@@ -104,14 +95,7 @@
     </div>
 
     <!-- Output -->
-    <div id="output" class="verse-card"></div>
-
-    <!-- Large Banner Ad Spot -->
-    <div class="mt-6 flex justify-center">
-      <div class="w-full md:w-11/12 lg:w-4/5 bg-gray-200 border border-dashed border-gray-400 rounded-lg text-center py-10">
-        <span class="text-gray-600 text-base">[ Banner Iklan Besar 970x250 / Responsive ]</span>
-      </div>
-    </div>
+    <div id="output"></div>
 
     <!-- Navigation -->
     <div class="flex flex-wrap gap-2 justify-center mt-3 text-sm">
@@ -121,13 +105,18 @@
       <button onclick="nextChapter()" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Next Chapter ⬇</button>
     </div>
 
+    <!-- Large Banner Ad Spot -->
+    <div class="mt-6 flex justify-center">
+      <div class="w-full md:w-11/12 lg:w-4/5 bg-gray-200 border border-dashed border-gray-400 rounded-lg text-center py-10">
+        <span class="text-gray-600 text-base">[ Banner Iklan Besar 970x250 / Responsive ]</span>
+      </div>
+    </div>
+
     <!-- Search Results -->
-    <section id="searchResults" class="mt-8 text-base leading-relaxed break-words"></section>
+    <section id="searchResults" class="mt-8"></section>
   </main>
 
   <!-- Script -->
   <script src="script.js"></script>
 </body>
 </html>
-
-
