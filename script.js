@@ -1,5 +1,5 @@
 let bibleData;
-let currentBook = "Genesis";
+let currentBook = "John";
 let currentChapter = 1;
 let currentVerse = 1;
 let searchActive = false;
@@ -202,3 +202,4 @@ function gotoVerse(book, chap, verse) {
 
   showVerse();
 }
+
