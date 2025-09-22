@@ -2,6 +2,7 @@ let bibleData;
 let currentBook = "Genesis";
 let currentChapter = 1;
 let currentVerse = 1;
+let searchActive = false; // flag mode hasil pencarian aktif
 
 // Load Bible JSON
 fetch("kjv_nested.json")
@@ -33,15 +34,18 @@ function initSelectors() {
     currentBook = bookSelect.value;
     updateChapters();
     updateVerses();
+    showChapter(); // hapus hasil search
   });
 
   chapterSelect.addEventListener("change", () => {
     currentChapter = parseInt(chapterSelect.value);
     updateVerses();
+    showChapter(); // hapus hasil search
   });
 
   verseSelect.addEventListener("change", () => {
     currentVerse = parseInt(verseSelect.value);
+    showVerse(); // hapus hasil search
   });
 }
 
@@ -67,6 +71,7 @@ function updateVerses() {
 
 // Show single verse
 function showVerse() {
+  searchActive = false; // hapus mode search
   const verseText = bibleData[currentBook][currentChapter][currentVerse];
   document.getElementById("output").innerHTML = `
     <div class="chapter-title">${currentBook} ${currentChapter}:${currentVerse}</div>
@@ -76,6 +81,7 @@ function showVerse() {
 
 // Show full chapter
 function showChapter() {
+  searchActive = false; // hapus mode search
   const verses = bibleData[currentBook][currentChapter];
   let html = `<div class="chapter-title">${currentBook} ${currentChapter}</div>`;
   Object.keys(verses).forEach(v => {
@@ -132,13 +138,15 @@ function prevChapter() {
 function searchBible() {
   const keyword = document.getElementById("searchBox").value.toLowerCase();
   const bookFilter = document.getElementById("searchBook").value;
-  const resultsDiv = document.getElementById("searchResults");
-  let results = "";
+  const container = document.getElementById("output"); // tampil di output utama
+  searchActive = true;
 
   if (!keyword) {
-    resultsDiv.innerHTML = "<p class='text-gray-600'>Please enter a keyword.</p>";
+    container.innerHTML = "<p class='text-gray-600'>Please enter a keyword.</p>";
     return;
   }
+
+  let results = "";
 
   Object.keys(bibleData).forEach(book => {
     if (bookFilter !== "all" && book !== bookFilter) return;
@@ -152,12 +160,32 @@ function searchBible() {
           );
           results += `
             <p class="verse-card">
-              <span class="verse-number">${book} ${chap}:${verse}</span> ${highlighted}
+              <a href="javascript:void(0)" onclick="gotoVerse('${book}', ${chap}, ${verse})" class="text-blue-700 hover:underline">
+                <span class="verse-number">${book} ${chap}:${verse}</span>
+              </a>
+              ${highlighted}
             </p>`;
         }
       });
     });
   });
 
-  resultsDiv.innerHTML = results || "<p class='text-gray-600'>No results found.</p>";
+  container.innerHTML = results || "<p class='text-gray-600'>No results found.</p>";
+}
+
+// Navigate to verse from search
+function gotoVerse(book, chap, verse) {
+  currentBook = book;
+  currentChapter = chap;
+  currentVerse = verse;
+  searchActive = false;
+
+  // Update dropdowns
+  document.getElementById("book").value = book;
+  updateChapters();
+  document.getElementById("chapter").value = chap;
+  updateVerses();
+  document.getElementById("verse").value = verse;
+
+  showVerse();
 }
