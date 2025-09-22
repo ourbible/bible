@@ -1,90 +1,243 @@
+// script.js (updated, full)
+// Features:
+// - fetch kjv_nested.json
+// - dropdowns (book/chapter/verse)
+// - showVerse/showChapter (clears search results/output appropriately)
+// - search that replaces output, with clickable results (event delegation)
+// - update title/meta keywords/description dynamically
+// - history.pushState/hash for shareable URLs
+// - Enter key triggers search
+// - popstate handling
+
 let bibleData = {};
-let currentBook = null;
-let currentChapter = null;
-let currentVerse = null;
+let currentBook = "Genesis";
+let currentChapter = 1;
+let currentVerse = 1;
+
+// flag to ensure search results click listener attached only once
+let _searchResultsListenerAttached = false;
+
+// === Helper: escape HTML to avoid injection when rendering text ===
+function escapeHtml(str = "") {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// === Meta helpers ===
+function updateMeta(name, content) {
+  let tag = document.querySelector(`meta[name="${name}"]`);
+  if (!tag) {
+    tag = document.createElement("meta");
+    tag.setAttribute("name", name);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute("content", content || "");
+}
+
+function updatePageMeta(title, description, keywords) {
+  if (title) document.title = title;
+  updateMeta("description", description || "");
+  updateMeta("keywords", keywords || "");
+}
 
 // === Load Bible JSON ===
 fetch("kjv_nested.json")
-  .then(res => res.json())
+  .then(res => {
+    if (!res.ok) throw new Error("Failed to load kjv_nested.json");
+    return res.json();
+  })
   .then(data => {
     bibleData = data;
-    console.log("Bible data loaded");
+    initSelectors();
+    // After selectors are ready, load current state from URL (if any)
+    loadFromURL();
+  })
+  .catch(err => {
+    console.error("Error loading Bible JSON:", err);
+    document.getElementById("output").innerHTML = "<p class='text-red-600'>Failed to load Bible data.</p>";
   });
 
-// === Update <title> & <meta> dynamically ===
-function updatePageMeta(title, description, keywords) {
-  document.title = title;
+// === Initialize dropdowns and listeners ===
+function initSelectors() {
+  const bookSelect = document.getElementById("book");
+  const chapterSelect = document.getElementById("chapter");
+  const verseSelect = document.getElementById("verse");
+  const searchBook = document.getElementById("searchBook");
+  const searchBox = document.getElementById("searchBox");
+  const searchBtn = document.querySelector("button[onclick='searchBible()'], button#searchBtn");
 
-  let descTag = document.querySelector("meta[name='description']");
-  if (!descTag) {
-    descTag = document.createElement("meta");
-    descTag.name = "description";
-    document.head.appendChild(descTag);
+  if (!bookSelect || !chapterSelect || !verseSelect || !searchBook || !searchBox) {
+    console.error("Missing expected DOM elements: ensure IDs book/chapter/verse/searchBook/searchBox exist.");
+    return;
   }
-  descTag.content = description;
 
-  let keyTag = document.querySelector("meta[name='keywords']");
-  if (!keyTag) {
-    keyTag = document.createElement("meta");
-    keyTag.name = "keywords";
-    document.head.appendChild(keyTag);
+  // Fill books in both selectors
+  Object.keys(bibleData).forEach(book => {
+    bookSelect.add(new Option(book, book));
+    searchBook.add(new Option(book, book));
+  });
+
+  // Set defaults (may be overridden by loadFromURL later)
+  bookSelect.value = currentBook;
+  updateChapters(); // fills chapter and sets chapterSelect.value
+  updateVerses();   // fills verse and sets verseSelect.value
+
+  // When user changes book -> update chapters and show chapter
+  bookSelect.addEventListener("change", () => {
+    currentBook = bookSelect.value;
+    // reset to chapter 1 when switching book (more intuitive)
+    currentChapter = 1;
+    currentVerse = 1;
+    updateChapters();
+    updateVerses();
+    showChapter(); // will clear searchResults
+  });
+
+  chapterSelect.addEventListener("change", () => {
+    currentChapter = parseInt(chapterSelect.value, 10) || 1;
+    // reset verse to 1 when changing chapter
+    currentVerse = 1;
+    updateVerses();
+    showChapter(); // will clear searchResults
+  });
+
+  verseSelect.addEventListener("change", () => {
+    currentVerse = parseInt(verseSelect.value, 10) || 1;
+    showVerse(); // will clear searchResults
+  });
+
+  // Enter key in search box triggers search
+  searchBox.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      searchBible();
+    }
+  });
+
+  // Optional: support search button if present
+  if (searchBtn) {
+    searchBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      searchBible();
+    });
   }
-  keyTag.content = keywords;
+
+  // Attach delegated click listener for search results (once)
+  attachSearchResultsListener();
 }
 
-// === Navigate to verse ===
-function gotoVerse(book, chapter, verse = null, push = true) {
-  currentBook = book;
-  currentChapter = chapter;
-  currentVerse = verse;
-
-  if (verse) {
-    showVerse(push);
-  } else {
-    showChapter(push);
+// === Update chapters dropdown based on currentBook ===
+function updateChapters() {
+  const chapterSelect = document.getElementById("chapter");
+  if (!chapterSelect) return;
+  chapterSelect.innerHTML = "";
+  const totalChapters = Object.keys(bibleData[currentBook] || {}).length || 0;
+  for (let i = 1; i <= totalChapters; i++) {
+    chapterSelect.add(new Option(i, i));
   }
+  // ensure currentChapter is valid
+  if (!currentChapter || currentChapter < 1) currentChapter = 1;
+  if (currentChapter > totalChapters) currentChapter = totalChapters || 1;
+  chapterSelect.value = currentChapter;
 }
 
-// === Show single verse ===
+// === Update verses dropdown based on currentBook/currentChapter ===
+function updateVerses() {
+  const verseSelect = document.getElementById("verse");
+  if (!verseSelect) return;
+  verseSelect.innerHTML = "";
+  const chapterObj = bibleData[currentBook] && bibleData[currentBook][currentChapter];
+  const totalVerses = chapterObj ? Object.keys(chapterObj).length : 0;
+  for (let i = 1; i <= totalVerses; i++) {
+    verseSelect.add(new Option(i, i));
+  }
+  if (!currentVerse || currentVerse < 1) currentVerse = 1;
+  if (currentVerse > totalVerses) currentVerse = totalVerses || 1;
+  verseSelect.value = currentVerse;
+}
+
+// === Show single verse (clears search results) ===
 function showVerse(push = true) {
-  const verseText = bibleData[currentBook][currentChapter][currentVerse];
+  if (!bibleData || !bibleData[currentBook] || !bibleData[currentBook][currentChapter]) {
+    document.getElementById("output").innerHTML = "<p class='text-red-600'>Verse not found.</p>";
+    return;
+  }
 
-  // Clear search results
-  document.getElementById("searchResults").innerHTML = "";
+  const verseTextRaw = bibleData[currentBook][currentChapter][currentVerse];
+  const verseText = escapeHtml(verseTextRaw);
 
-  document.getElementById("output").innerHTML = `
-    <div class="chapter-title">${currentBook} ${currentChapter}:${currentVerse}</div>
-    <p class="verse-card"><span class="verse-number">${currentVerse}</span> ${verseText}</p>
-  `;
+  // Clear both areas so only one content is shown
+  const searchResultsEl = document.getElementById("searchResults");
+  const outputEl = document.getElementById("output");
+  if (searchResultsEl) searchResultsEl.innerHTML = "";
+  if (outputEl) outputEl.innerHTML = "";
 
+  if (outputEl) {
+    outputEl.innerHTML = `
+      <div class="chapter-title">${escapeHtml(currentBook)} ${currentChapter}:${currentVerse}</div>
+      <p class="verse-card"><span class="verse-number">${currentVerse}</span> ${verseText}</p>
+    `;
+  }
+
+  // Update dropdown states (in case called from other places)
+  const bookSelect = document.getElementById("book");
+  if (bookSelect) bookSelect.value = currentBook;
+  updateChapters();
+  const chapterSelect = document.getElementById("chapter");
+  if (chapterSelect) chapterSelect.value = currentChapter;
+  updateVerses();
+  const verseSelect = document.getElementById("verse");
+  if (verseSelect) verseSelect.value = currentVerse;
+
+  // Update meta and title
   updatePageMeta(
     `${currentBook} ${currentChapter}:${currentVerse} (KJV) | OurBible`,
-    `${currentBook} ${currentChapter}:${currentVerse} - ${verseText}`,
+    `${currentBook} ${currentChapter}:${currentVerse} - ${verseTextRaw}`,
     `${currentBook}, ${currentBook} ${currentChapter}, ${currentBook} ${currentChapter}:${currentVerse}, Bible, KJV`
   );
 
+  // Push state / update URL hash
   if (push) {
-    history.pushState(
-      { book: currentBook, chapter: currentChapter, verse: currentVerse },
-      "",
-      `#${currentBook}/${currentChapter}/${currentVerse}`
-    );
+    const hash = `#${encodeURIComponent(currentBook)}/${currentChapter}/${currentVerse}`;
+    history.pushState({ book: currentBook, chapter: currentChapter, verse: currentVerse }, "", hash);
   }
 }
 
-// === Show full chapter ===
+// === Show full chapter (clears search results) ===
 function showChapter(push = true) {
+  if (!bibleData || !bibleData[currentBook] || !bibleData[currentBook][currentChapter]) {
+    document.getElementById("output").innerHTML = "<p class='text-red-600'>Chapter not found.</p>";
+    return;
+  }
+
   const verses = bibleData[currentBook][currentChapter];
 
-  // Clear search results
-  document.getElementById("searchResults").innerHTML = "";
+  // Clear both areas
+  const searchResultsEl = document.getElementById("searchResults");
+  const outputEl = document.getElementById("output");
+  if (searchResultsEl) searchResultsEl.innerHTML = "";
+  if (outputEl) outputEl.innerHTML = "";
 
-  let html = `<div class="chapter-title">${currentBook} ${currentChapter}</div>`;
+  let html = `<div class="chapter-title">${escapeHtml(currentBook)} ${currentChapter}</div>`;
   Object.keys(verses).forEach(v => {
-    html += `<p class="verse-card"><span class="verse-number">${v}</span> ${verses[v]}</p>`;
+    html += `<p class="verse-card"><span class="verse-number">${v}</span> ${escapeHtml(verses[v])}</p>`;
   });
-  document.getElementById("output").innerHTML = html;
 
+  if (outputEl) outputEl.innerHTML = html;
+
+  // Update dropdowns
+  const bookSelect = document.getElementById("book");
+  if (bookSelect) bookSelect.value = currentBook;
+  updateChapters();
+  const chapterSelect = document.getElementById("chapter");
+  if (chapterSelect) chapterSelect.value = currentChapter;
+  updateVerses();
+
+  // Update meta/title
   updatePageMeta(
     `${currentBook} ${currentChapter} (KJV) | OurBible`,
     `Read ${currentBook} chapter ${currentChapter} (KJV Bible).`,
@@ -92,95 +245,234 @@ function showChapter(push = true) {
   );
 
   if (push) {
-    history.pushState(
-      { book: currentBook, chapter: currentChapter, verse: null },
-      "",
-      `#${currentBook}/${currentChapter}`
-    );
+    const hash = `#${encodeURIComponent(currentBook)}/${currentChapter}`;
+    history.pushState({ book: currentBook, chapter: currentChapter, verse: null }, "", hash);
   }
 }
 
-// === Search Bible ===
+// === Navigation helpers ===
+function nextVerse() {
+  const chapterObj = bibleData[currentBook] && bibleData[currentBook][currentChapter];
+  const totalVerses = chapterObj ? Object.keys(chapterObj).length : 0;
+  if (currentVerse < totalVerses) {
+    currentVerse++;
+    updateVerses();
+    showVerse();
+  } else {
+    nextChapter();
+  }
+}
+
+function prevVerse() {
+  if (currentVerse > 1) {
+    currentVerse--;
+    updateVerses();
+    showVerse();
+  } else {
+    prevChapter();
+  }
+}
+
+function nextChapter() {
+  const totalChapters = Object.keys(bibleData[currentBook] || {}).length;
+  if (currentChapter < totalChapters) {
+    currentChapter++;
+    currentVerse = 1;
+    updateChapters();
+    updateVerses();
+    showChapter();
+  }
+}
+
+function prevChapter() {
+  if (currentChapter > 1) {
+    currentChapter--;
+    currentVerse = 1;
+    updateChapters();
+    updateVerses();
+    showChapter();
+  }
+}
+
+// === Search function (writes to #searchResults, clears #output) ===
 function searchBible(push = true) {
-  const keyword = document.getElementById("searchBox").value.toLowerCase();
-  const bookFilter = document.getElementById("searchBook").value;
+  const rawKeyword = (document.getElementById("searchBox") && document.getElementById("searchBox").value) || "";
+  const keyword = rawKeyword.trim().toLowerCase();
+  const bookFilter = (document.getElementById("searchBook") && document.getElementById("searchBook").value) || "all";
   const resultsDiv = document.getElementById("searchResults");
+  const outputDiv = document.getElementById("output");
 
-  // Clear output
-  document.getElementById("output").innerHTML = "";
+  if (!resultsDiv) {
+    console.error("Missing #searchResults element");
+    return;
+  }
 
-  let results = "";
+  // Clear output area
+  if (outputDiv) outputDiv.innerHTML = "";
+
   if (!keyword) {
     resultsDiv.innerHTML = "<p class='text-gray-600'>Please enter a keyword.</p>";
     return;
   }
 
+  let resultsHtml = "";
+
   Object.keys(bibleData).forEach(book => {
     if (bookFilter !== "all" && book !== bookFilter) return;
     Object.keys(bibleData[book]).forEach(chap => {
       Object.keys(bibleData[book][chap]).forEach(verse => {
-        const text = bibleData[book][chap][verse];
-        if (text.toLowerCase().includes(keyword)) {
-          const highlighted = text.replace(
-            new RegExp(keyword, "gi"),
-            match => `<mark>${match}</mark>`
-          );
-          results += `
+        const textRaw = bibleData[book][chap][verse];
+        if (!textRaw) return;
+        if (textRaw.toLowerCase().includes(keyword)) {
+          // escape text, then highlight keyword (escaped match)
+          const escapedText = escapeHtml(textRaw);
+          const highlighted = escapedText.replace(new RegExp(keyword, "gi"), match => `<mark>${match}</mark>`);
+          // use data attributes to avoid inline JS quoting issues
+          resultsHtml += `
             <p class="verse-card">
-              <a href="javascript:void(0)" 
-                 onclick="gotoVerse('${book}', ${chap}, ${verse})"
-                 class="font-bold text-blue-700 hover:underline"
-                 title="Go to ${book} ${chap}:${verse}">
-                ${book} ${chap}:${verse}
-              </a> ${highlighted}
+              <a href="#" class="search-link font-bold text-blue-700 hover:underline"
+                 data-book="${escapeHtml(book)}" data-chap="${chap}" data-verse="${verse}"
+                 title="Go to ${escapeHtml(book)} ${chap}:${verse}">
+                ${escapeHtml(book)} ${chap}:${verse}
+              </a>
+              ${highlighted}
             </p>`;
         }
       });
     });
   });
 
-  resultsDiv.innerHTML = results || "<p class='text-gray-600'>No results found.</p>";
+  resultsDiv.innerHTML = resultsHtml || "<p class='text-gray-600'>No results found.</p>";
 
+  // Update meta/title
   updatePageMeta(
-    `Search results for "${keyword}" | OurBible`,
-    `Search results in KJV Bible for "${keyword}".`,
-    `${keyword}, Bible search, KJV, Scripture`
+    `Search results for "${escapeHtml(rawKeyword)}" | OurBible`,
+    `Search results in KJV Bible for "${escapeHtml(rawKeyword)}".`,
+    `${escapeHtml(rawKeyword)}, Bible search, KJV, Scripture`
   );
 
+  // push state
   if (push) {
-    history.pushState({ search: keyword }, "", `#search=${encodeURIComponent(keyword)}`);
+    history.pushState({ search: rawKeyword }, "", `#search=${encodeURIComponent(rawKeyword)}`);
   }
 }
 
-// === Listen for Enter on search box ===
-document.addEventListener("DOMContentLoaded", () => {
-  const searchBox = document.getElementById("searchBox");
-  if (searchBox) {
-    searchBox.addEventListener("keypress", function (e) {
-      if (e.key === "Enter") {
-        searchBible();
-      }
-    });
-  }
-});
+// === Attach a delegated click handler to #searchResults so links work ===
+function attachSearchResultsListener() {
+  if (_searchResultsListenerAttached) return;
+  const resultsDiv = document.getElementById("searchResults");
+  if (!resultsDiv) return;
 
-// === Handle back/forward ===
-window.onpopstate = function (event) {
-  if (event.state) {
-    if (event.state.search) {
-      document.getElementById("searchBox").value = event.state.search;
-      searchBible(false);
-    } else if (event.state.book) {
-      gotoVerse(event.state.book, event.state.chapter, event.state.verse, false);
+  resultsDiv.addEventListener("click", function (e) {
+    const a = e.target.closest && e.target.closest(".search-link");
+    if (!a) return;
+    e.preventDefault();
+    const book = a.getAttribute("data-book");
+    const chap = parseInt(a.getAttribute("data-chap"), 10);
+    const verse = parseInt(a.getAttribute("data-verse"), 10);
+
+    // Set current and show — showVerse will clear searchResults
+    currentBook = book;
+    currentChapter = chap;
+    currentVerse = verse;
+
+    // update dropdowns if present
+    const bookSelect = document.getElementById("book");
+    if (bookSelect) bookSelect.value = currentBook;
+    updateChapters();
+    const chapterSelect = document.getElementById("chapter");
+    if (chapterSelect) chapterSelect.value = currentChapter;
+    updateVerses();
+    const verseSelect = document.getElementById("verse");
+    if (verseSelect) verseSelect.value = currentVerse;
+
+    showVerse();
+  });
+
+  _searchResultsListenerAttached = true;
+}
+
+// === gotoVerse helper for programmatic navigation (used by popstate and others) ===
+function gotoVerse(book, chap, verse = null, push = true) {
+  currentBook = book;
+  currentChapter = parseInt(chap, 10) || 1;
+  currentVerse = verse ? parseInt(verse, 10) : 1;
+
+  // update dropdowns
+  const bookSelect = document.getElementById("book");
+  if (bookSelect) bookSelect.value = currentBook;
+  updateChapters();
+  const chapterSelect = document.getElementById("chapter");
+  if (chapterSelect) chapterSelect.value = currentChapter;
+  updateVerses();
+  const verseSelect = document.getElementById("verse");
+  if (verseSelect) verseSelect.value = currentVerse;
+
+  if (verse !== null && verse !== undefined) {
+    showVerse(push);
+  } else {
+    showChapter(push);
+  }
+}
+
+// === Load state from URL hash (on initial load) ===
+function loadFromURL() {
+  const hash = (window.location.hash || "").replace(/^#/, "");
+  if (!hash) {
+    // show default book/chapter/verse without pushing state
+    gotoVerse(currentBook, currentChapter, currentVerse, false);
+    return;
+  }
+
+  if (hash.startsWith("search=")) {
+    const keyword = decodeURIComponent(hash.split("=").slice(1).join("="));
+    const sb = document.getElementById("searchBox");
+    if (sb) sb.value = keyword;
+    searchBible(false);
+    return;
+  }
+
+  // hash like Book/Chapter[/Verse]
+  const parts = hash.split("/");
+  if (parts.length >= 2) {
+    const book = decodeURIComponent(parts[0]);
+    const chap = parseInt(parts[1], 10) || 1;
+    const verse = parts[2] ? parseInt(parts[2], 10) : null;
+
+    // validate book exists
+    if (bibleData[book]) {
+      gotoVerse(book, chap, verse, false);
+    } else {
+      // fallback to default
+      gotoVerse(currentBook, currentChapter, currentVerse, false);
     }
   } else {
-    // Reset to homepage
-    document.getElementById("output").innerHTML = "";
-    document.getElementById("searchResults").innerHTML = "";
+    gotoVerse(currentBook, currentChapter, currentVerse, false);
+  }
+}
+
+// === popstate handling for back/forward navigation ===
+window.addEventListener("popstate", function (event) {
+  const state = event.state;
+  if (!state) {
+    // no state — reset to default homepage view (clear both)
+    const outputEl = document.getElementById("output");
+    const resultsEl = document.getElementById("searchResults");
+    if (outputEl) outputEl.innerHTML = "";
+    if (resultsEl) resultsEl.innerHTML = "";
     updatePageMeta(
       "KJV Bible Online | OurBible",
       "Read the King James Version Bible online. Search, browse, and study scripture.",
       "Bible, KJV, Scripture, Online Bible, OurBible"
     );
+    return;
   }
-};
+
+  if (state.search) {
+    const sb = document.getElementById("searchBox");
+    if (sb) sb.value = state.search;
+    searchBible(false);
+  } else if (state.book) {
+    gotoVerse(state.book, state.chapter, state.verse, false);
+  }
+});
